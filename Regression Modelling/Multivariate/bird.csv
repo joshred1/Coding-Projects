@@ -1,0 +1,63 @@
+name,extinct,nest.pair,size,mig.status
+Sparrowhawk,30.03,1,L,R
+Buzzard,5.464,2,L,R
+Kestrel,4.098,1.21,L,R
+Peregrine,1.681,1.125,L,R
+Grey partridge,8.85,5.167,L,R
+Quail,1.493,1,L,M
+Red-leg partridge,7.692,2.75,L,R
+Pheasant,3.846,5.63,L,R
+Water Rail,16.667,3,L,R
+Corncrake ,4.219,4.67,L,M
+Moorhen,8.13,4.56,L,R
+Coot,5,1,L,R
+Lapwing,7.299,6.96,L,M
+Golden plover,1,1.67,L,M
+Ringed Plover,27.027,5.56,L,R
+Curlew,3.106,2.83,L,M
+Redshank,4,4.375,L,M
+Snipe,16.129,4.125,L,M
+Stock dove,3.484,3.67,L,R
+Rock dove,37.037,8.33,L,R
+Wood Pigeon,7.299,2.75,L,R
+Cuckoo,2.525,1.43,L,M
+short-eared owl,4.132,2,L,R
+Little owl,2,2.75,L,R
+Magpie,10,4.5,L,R
+Jackdaw,2.667,7.12,L,R
+Carrion Crow,4.587,4.58,L,R
+Raven,58.824,2.35,L,R
+Skylark,32.258,6.78,S,R
+Swallow,2.571,3.83,S,M
+House martin,2.16,5,S,M
+Yellow wagtail,1,1.25,S,M
+Pied wagtail,2.967,2.27,S,R
+Meadow pipit,9.524,5.35,S,R
+Wren,11.111,8.7,S,R
+Dunnock,7.299,6.1,S,R
+Robin,4,3.33,S,R
+stonechat,2.381,3.64,S,R
+wheatear,2.611,4.83,S,M
+blackbird,3.257,4.67,S,R
+Song thrush,1.701,1.7,S,R
+Mistle thrush,1.795,1.33,S,R
+Grasshopper warbler,1.198,1,S,M
+Sedge warbler,3.185,1.9,S,M
+Whitethroat,2.273,4.42,S,M
+Willow warbler,1.111,1.25,S,M
+Chiffchaff,1,1,S,M
+Goldcrest,1,1,S,R
+Spotted Flycatcher,1.23,1,S,M
+Great tit,6.061,2.5,S,R
+Blue tit,3.175,1.5,S,R
+Yellowhammer,2,2.5,S,R
+Reed bunting,5.076,5.63,S,R
+Chaffinch,1.934,2.37,S,R
+Goldfinch,1.493,1.5,S,R
+Redpoll,1,1,S,R
+Linnet,5.102,6.5,S,R
+House sparrow,3.003,4.5,S,R
+Tree sparrow,1.898,2.17,S,R
+Starling,41.667,11.62,S,R
+Pied flycatcher,1,1,S,M
+Siskin,1,1,S,R

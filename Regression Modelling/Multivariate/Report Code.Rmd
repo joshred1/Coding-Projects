@@ -1,0 +1,442 @@
+---
+title: "Regression Modelling Assignment 2"
+author: "Joshua Redolfi"
+date: "21 May 2019"
+geometry: margin=1.3cm
+output: pdf_document
+---
+***
+#Question 1
+
+```{r echo=FALSE}
+pollution <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 1/STAT2008- Regression Modelling/Assignments/Assignment 2/pollution.csv")
+bird <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 1/STAT2008- Regression Modelling/Assignments/Assignment 2/bird.csv")
+attach(pollution)
+```
+
+>A group of researchers in the US attempted to look at the pollution related factors affecting mortality. Sixty US cities were sampled. Total age-adjusted mortality, ` (mortality)`, from all causes, in deaths per 100,000 population, was measured, along with the following covariates: mean annual
+precipitation (in inches) ` (precipitation)`; median number of school years completed for persons
+aged 25 years or older ` (education)`; percentage of population that is non-white ` (nonwhite)`; rel-
+ative pollution potential of oxides of nitrogen ` (nox)`; and relative pollution potential of sulphur
+dioxide ` (so2)`. "Relative pollution potential" is the product of tons emitted per day per square kilometre and a factor correcting for the city dimension and exposure. The data is available in a *.csv* fle,
+` pollution`.
+
+##(a) Assessing Model Significance
+
+We are interested in modelling the impact of certain pollution related factors on mortality using the data provided in a study across sixty US cities. As such, we begin our analysis by fitting the multiple linear regression model with ` mortality` as our response variable and all other covariates as predictors:
+
+$$\displaystyle mortality_{i}=\beta_{0} + \beta_{1}precipitation_{i}+\beta_{2}education_{i} + \beta_{3}nonwhite_{i} + \beta_{4}nox_{i} + \beta_{5}so2_{i} + \varepsilon_{i}, \ \ \varepsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+
+```{r}
+lm.mortality <- lm(mortality ~ precipitation + education + nonwhite + nox + so2)
+lm.mortality
+```
+
+Lets proceed further into our investigation by assessing the fit of our model 
+$\mathbf{{Y}}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$ by conducting an F-Test for overall significance as follows:
+
+$$H_{0}:\bigcap\limits_{i=1}^{5} \beta_{i} = 0,  \ H_{A}: \bigcup\limits_{i=1}^{5} \beta_{i} \neq 0$$
+
+```{r}
+anova(lm.mortality)
+```
+
+For a MLR model with *n* observations and *p* parameters, we can calculate the observed f-statistic by the equation:
+$$F^{*}_{(p-1,n-p)}=\frac{MSR}{MSE}=\frac{SSR(X_{5}| X_{4},\cdots,X_{1})+SSR(X_{4}|X_{3},\cdots,X_{1})+\cdots+SSR(X_{1})}{p-1} \div \frac{SSE(X_{5},\cdots,X_{1})}{n-p}$$
+
+$$=\frac{8492.1+2229.7+4031.4+4632.4+772.4}{5}\div\frac{20826.4}{24}$$
+
+$$=4.65 \ on \ 5 \ and \ 24 \ df.$$
+```{r}
+p.value <- 1-pf(4.646, df1 = 5, df2 = 24)
+p.value
+```
+
+By computing $F_{(5,24)}^{*}$ using the output provided in the ANOVA table, we obtain the relevant p-value from its respective f-distribution. $p-value=0.004166<\alpha=0.05$ hence there is sufficient evidence to reject the null hypothesis in favour of the alternative hypothesis and conclude that the variance explained by the model is significantly larger than the residual variance. Thus, it can be deduced from the F-Test that the regression model is significant overall. 
+
+##(b) Interpreting Model Coefficients
+
+```{r}
+summary(lm.mortality)
+```
+
+From the summary output in R, we see that the intercept estimate $\hat{\beta_{0}}=1017.83$ and its associated standard error is $SE(\hat{\beta_{1}})=119.18$. We can interpret the intercept parameter as the response for when all other factors in our model are zero. In this model for instance, we expect mortality to be 1017.8272 when all predictor variables are zero. Likewise for the slope coefficients for ` precipitation, education, nonwhite, nox` and `so2` respectively; $\hat{\beta_{1}}=1.96, \ SE(\hat{\beta_{1}})=1.28$, $\hat{\beta_{2}}=-13.05, \ SE(\hat{\beta_{2}})=8.69$, $\hat{\beta_{3}}=0.62, \ SE(\hat{\beta_{3}})=0.85$, $\hat{\beta_{4}}=2.01, \ SE(\hat{\beta_{4}})=1.21$, $\hat{\beta_{5}}=-0.24, \ SE(\hat{\beta_{5}})=0.25$.
+
+We can interpret these coefficients as the differential rate of change in its corresponding covariate, with respect to the dependent variable *mortality*, holding all other variables constant. In the case of *precipitation* for instance, we can infer from the model that there is a unit increase in *mortality* for every 1.9614 units of increase in *precipitation* holding all other factors constant.
+
+##(c) T-Test for Regression Coefficients
+
+We can use T-Tests to evaluate the significance of the model coefficients by assessing the individual impact of each coefficient on expanding the predictive capacity of the least squares model. This is achieved by measuring a confidence interval of significance level $\alpha$ and computing the success rate of the sequential capture for normalised predicted responses as determined by the regression model. Equivalently, we can conduct a sequential F-Test to assess the additional explained variability derived from the added predictor. However unlike the sequential F-Test, the statistical significance of the coefficients remain constant no matter in what order they are fitted in when conducting the T-Test as these values are derived from the least squares model, whereas the analysis of variance method partitions the variability into extra sums of squares.T-Tests therefore cannot be used to visualise the significance of covariates in relation to each other, as they operate on the contingency that all other predictors have already been fitted in the model. For instance, we can interpret the predictor variable *precipitation* as being insignificant (*p-value >* $\alpha$), given that all other factors for *mortality* have already been fitted in the model. It is also worth pointing out that the square of the t-statistic for the predictor variable fitted last in the model is equivalent to the corresponding F-statistic in the analysis of variance. 
+
+Using our MLR coefficients obtained in part (b), we can conduct these individual T-Tests by setting up the following hypotheses:
+
+$$H_{0}: \beta_{i}=0, \ \ H_{A}:\beta_{i}\neq0$$
+
+$$t^{*}_{(n-5)}=\frac{\hat{\beta_{i}}-0}{SE(\hat{\beta_{i}})} \ \ for \ i=0,\dots,5.$$
+We compute the test statistic $t^{*}$ for all six hypothesis tests where the observed sample coefficients $\hat{\beta_{i}}$ follow a t-distribution with *24 degrees of freedom* (he results of these tests can be found in the appendix).
+
+The resulting *p-values* from the performed t-tests have yielded insignificant results under the $\alpha=0.05$ significance level for all but the intercept parameter, hence we fail to reject the null hypothesis for predictor coefficients $\beta_{1},\dots,\beta_{5}$ and cannot conclude that these parameters are significant predictors in the fitted model. Furthermore, we reject the null hypothesis in favour of the alternative hypothesis in the test for $\beta_{0}$ and thus conclude the intercept parameter to be statistically significant from 0.
+
+##(d) Testing for Significance of Education and NOX
+
+We would like to construct an appropriate hypothesis test to evaluate the significance of *education* and *nox* as predictor variables in the model. We want to know whether these variables are *both* significant, hence we conduct the following test:
+
+$$H_{0}: \beta_{2}=\beta_{4}=0, \ \ H_{A}:\{\beta_{2}\cup\beta_{4}\}\neq0$$
+
+We can achieve this by using a nested f-test to assess the significance of the two covariates simultaneously:
+
+$$Small \ Model: Y_{i}=\beta_{0} + \beta_{1}X_{i1}+ \beta_{3}X_{i3} + \beta_{5}X_{i5} + \epsilon_{i}, \ \ \epsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+
+$$Full \ Model: Y_{i}=\beta_{0} + \beta_{1}X_{i1}+\beta_{2}X_{i2} + \beta_{3}X_{i3} + \beta_{4}X_{i4} + \beta_{5}X_{i5} + \epsilon_{i}, \ \ \epsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+
+```{r}
+lm.mortality.small <- lm(mortality ~ precipitation + nonwhite + so2)
+lm.mortality.full <- lm(mortality ~ precipitation + education + nonwhite + nox + so2)
+anova(lm.mortality.small, lm.mortality.full)
+```
+
+$$F^{*}=\frac{MSR(X_{2},X_{4}|X_{1},X_{3},X_{5})}{MSE(X_{1},\dots ,X_{5})}=\frac{SSE(X_{1},X_{3},X_{5})-SSE(X_{1},\dots,X_{5})}{(n-p_{small})-(n-p_{full})}\div\frac{SSE(X_{1},\dots ,X_{5})}{n-p_{full}}$$
+
+$$=\frac{24408-20826}{(30-4)-(30-6)}\div\frac{20826}{30-6}$$
+
+$$=2.06 \ on \ 2 \ and \ 24 \ df.$$
+
+By computing the observed f-statistic $f^{*}_{(2,24)}$ using the double argument ANOVA table in R, we obtain the relevant p-value from its corresponding f-distribution. $p-value= 0.1489>\alpha=0.05$ so we fail to reject the null and therefore cannot conclude that *education* and *nox* are both significant predictors in the model.
+
+
+##(e) Fitting an Alternative Model
+
+We would like to fit a regression model with coefficients $\beta_{1}=2$, $\beta_{2}=-10$, $\beta_{3}=3$, $\beta_{4}=0$ and $\beta_{5}=1$. We can do so by equating the estimated intercept term as follows;
+
+$$\hat{\beta_{0}}=\bar{Y}_{i}-(\hat{\beta_{1}}\bar{X}_{i1}+\hat{\beta_{2}}\bar{X}_{i2}+\hat{\beta_{3}}\bar{X}_{i3}+\hat{\beta_{4}}\bar{X}_{i4}+\hat{\beta_{5}}\bar{X}_{i5})$$
+
+```{r}
+b.0 <- mean(mortality)-(2*mean(precipitation) - 10*mean(education) 
+      + 3*mean(nonwhite) + 0*mean(nox) + 1*mean(so2))
+b.0
+```
+
+Hence, we can fit the required model:
+
+$$mortality_{i}=884.50\times \beta_{0} + 2\times precipitation_{i}-10\times education_{i} + 3\times nonwhite_{i} + so2_{i} + \varepsilon_{i}$$
+
+##(f) Interval Estimation
+
+We would like to predict the mortality rate for an observation $\mathbf{x_{0}}$ given `precipitation=33, education=11.5, nonwhite=17.2, nox=1, so2=1`. This can be achieved by computing the 99% prediction interval for $\widehat{mortality_{i}}=\mathbf{x_{0}^{T}}\boldsymbol{\hat{\beta}}$. We can compute a $100(1-\alpha)\%$ prediction interval of *mortality* using the equation: 
+
+$$\hat{Y_{h}}|\mathbf{x_{0}}\pm t_{(n-p)}(1-\alpha/2)\hat{\sigma}\sqrt{1+\mathbf{x_{0}^{T}(X^{T}X)^{-1}x_{0}^{T}}}$$ 
+where $\mathbf{x_{0}}=\begin{bmatrix} 33 \\ 11.5 \\ 17.2 \\ 1 \\ 1 \end{bmatrix}.$
+
+In R we can simply use the predict function to obtain the desired prediction for *mortality* which we found to be 944.88, with a prediction interval of (851.72, 1038.03) to two decimal places.
+
+```{r}
+predict(lm.mortality.full, newdata = data.frame(precipitation = 33, education = 11.5,
+        nonwhite = 17.2, nox = 1, so2 = 1), interval = 'prediction', level = 0.99)
+```
+
+#Question 2
+
+```{r echo=FALSE}
+bird <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 1/STAT2008- Regression Modelling/Assignments/Assignment 2/bird.csv")
+attach(bird)
+```
+
+>The data for this question comprises measurements on breeding pairs of land-bird species collected
+from 16 islands around Britain over the course of several decades available in a *.csv* fle, bird. For
+each species, the data set contains an average time of extinctions, ` extinct`, on those islands where the species appeared. (This is actually the reciprocal of the average of *1/T* where *T* is the length of time the species remained on the island and *1/T* is taken to be zero if the species did not become extinct on the island); the average number of nesting pairs per year, over all islands where the species appeared ` (nest.pair)`; the size ` (size)` of the species, (*S = Small, L = Large*); and the migratory status ` (mig.status)` of the species, (*R = Resident, M = Migrant*). It is expected that species with large numbers of nesting pairs will tend to remain longer before becoming extinct. Of particular interest is whether, after accounting for the number of nesting pairs, size or migratory status has any effect.
+
+##(a) Model Significance and Interpretation
+
+We are interested in developing a multiple linear regression model of the relationship between the average time of extinctions and the factors pertaining to the demographic measurements provided in a cohesive study of land-bird species across sixteen islands around Britain. As such, we begin our analysis by fitting the least squares model with ` extinct` as our response variable and all other covariates as predictors:
+
+$$\displaystyle extinct_{i}=\beta_{0} + \beta_{1}nest.pair_{i}+\beta_{2}size_{i} + \beta_{3}mig.status_{i}+\varepsilon_{i}, \ \ \varepsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+Where the categorical variables `size` and `mig.status` are:
+$$size_{i}=\begin{cases} 0, &size=L \\ 1, &size=S \end{cases}$$
+
+$$mig.status_{i}=\begin{cases} 0, &mig.status=M \\ 1, &mig.status=R \end{cases}$$
+
+Here we see that the factor variable *size* can take on two levels, denoted by 0 and 1, to represent whether each case of bird species is *large* or *small* respectively. Similarly, the factor variable *mig.status* takes on the value 0 or 1 to denote whether the migratory status of the bird species is *migrant* or *resident*. 
+
+```{r}
+lm.extinct <- lm(extinct ~ nest.pair + factor(size) + factor(mig.status))
+lm.extinct
+```
+
+We further our investigation by conducting an F-Test for overall significance to assess the fit of our model:
+
+$$H_{0}:\bigcap\limits_{i=1}^{3} \beta_{i} = 0,  \ H_{A}: \bigcup\limits_{i=1}^{3} \beta_{i} \neq 0$$
+
+```{r}
+anova(lm.extinct)
+```
+
+For a MLR model with *n* observations and *p* parameters, we can calculate the observed f-statistic by the equation:
+$$F^{*}_{(p-1,n-p)}=\frac{MSR}{MSE}=\frac{SSR(X_{3}| X_{2},X_{1})+SSR(X_{2}|X_{1})+SSR(X_{1})}{p-1} \div \frac{SSE(X_{3},X_{2},X_{1})}{n-p}$$
+
+$$=\frac{237.2+382.8+1394.4}{3}\div\frac{5469.7}{58}$$
+
+$$=7.12 \ on \ 3 \ and \ 58 \ df.$$
+```{r}
+p.value <- 1-pf(7.12, df1 = 3, df2 = 58)
+p.value
+```
+
+By computing $F_{(3,58)}^{*}$ using the output provided in the ANOVA table, we obtain the relevant p-value from its respective f-distribution. $p-value=0.0003746761<\alpha=0.05$ hence there is sufficient evidence to reject the null hypothesis in favour of the alternative hypothesis and conclude that the variance explained by the model is significantly larger than the residual variance. Thus, it can be deduced from the F-Test that the regression model is significant overall. 
+
+```{r}
+summary(lm.extinct)
+```
+
+producing the summary output in R we see that our estimated slope coefficients for the categorical variables ` size` and ` mig.status` with reference levels L and M respectively are; $\hat{\beta_{2}}=-4.85$, $\hat{\beta_{3}}=4.31$. These coefficients compare the change in the response variable *extinct* between whether the factor takes on one of the two categories by measuring the additional value over the reference category. For instance we can interpret the estimated coefficient of *size* as the change in response dependent on whether size is small vs when size is large: $\hat{\beta_{2}}=\bar{y}_{S}-\bar{y}_{L}$. In our sample, we've found that the mean value of the response variable to be 4.85 less for small bird species in comparison to the mean response for large bird species. Likewise, we can interpret the estimated coefficient of *mig.status* as the change in response dependent on whether migration status is resident vs migrant: $\hat{\beta_{3}}=\bar{y}_{R}-\bar{y}_{M}$. We find that the mean response for species with the *Resident* migratory status is 4.31 higher than for species in the *Migrant* category. 
+
+We also note that the slope coefficient for the predictor *nest.pair* $\hat{\beta_{1}}=1.89$. Its corresponding p-value of 0.00107 is statistically significant, which suggests that for every 1.89 increase in the average number of nesting pairs per year, there is a unit increase in the average time of extinction, thereby supporting the expectation that larger numbers of nesting pairs tends to delay extinction.
+
+##(b) Analysis of Variance and F-Test
+
+We would like to construct an appropriate hypothesis test to evaluate the significance of *size* and *mig.status* as predictor variables in the model. We want to know whether these variables are *both* significant, hence we conduct the following test:
+
+$$H_{0}: \beta_{2}=\beta_{3}=0, \ \ H_{A}:\{\beta_{2}\cup\beta_{3}\}\neq0$$
+
+We can achieve this by using a nested f-test to assess the significance of the two covariates simultaneously:
+
+$$Small \ Model: Y_{i}=\beta_{0} + \beta_{1}X_{i1} + \epsilon_{i}, \ \ \epsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+
+$$Full \ Model: Y_{i}=\beta_{0} + \beta_{1}X_{i1}+\beta_{2}X_{i2} + \beta_{3}X_{i3} + \epsilon_{i}, \ \ \epsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$$
+
+```{r}
+lm.extinct.small <- lm(extinct ~ nest.pair)
+lm.extinct.full <- lm(extinct ~ nest.pair + factor(size) + factor(mig.status))
+anova(lm.extinct.small, lm.extinct.full)
+```
+
+$$F^{*}=\frac{MSR(X_{2},X_{3}|X_{1})}{MSE(X_{1}, X_{2},X_{3})}=\frac{SSE(X_{1})-SSE(X_{1},X_{2},X_{3})}{(n-p_{small})-(n-p_{full})}\div\frac{SSE(X_{1},X_{2},X_{3})}{n-p_{full}}$$
+
+$$=\frac{6089.6-5469.7}{(62-2)-(62-4)}\div\frac{5469.7}{62-4}$$
+
+$$=3.29 \ on \ 2 \ and \ 58 \ df.$$
+
+By computing the observed f-statistic $f^{*}_{(2,58)}$ using the double argument ANOVA table in R, we obtain the relevant p-value from its corresponding f-distribution. $p-value= 0.04443<\alpha=0.05$, hence there is significant evidence to reject the null hypothesis in favour of the alternative hypothesis, and thus conclude that size and migration status are both significant predictors in the model, even after accounting for the number of nesting pairs.
+
+##(c) Difference in Extinction Times of Two Species
+
+We can predict the difference in extinction times for the Red-crested Periwinkle and the Great Plover by constructing a regression model for each species. 
+
+Given that the Red-crested Periwinkle is a small, migratory species of bird, we can produce the model;
+
+$$\widehat{extinct}_{i}=\hat{\beta}_{0} + \hat{\beta}_{1}nest.pair_{i}+\hat{\beta}_{2}(size=S)+\hat{\beta}_{3}(mig.status=M)$$ 
+
+$$\sim \widehat{extinct}_{i}=\hat{\beta}_{0} + \hat{\beta}_{1}nest.pair_{i}+\hat{\beta}_{2}$$
+
+We can also produce the model for the Great Plover given that it is a large, resident species of bird;
+
+$$\widehat{extinct}_{i}=\hat{\beta}_{0} + \hat{\beta}_{1}nest.pair_{i} +\hat{\beta}_{2}(size=L)+\hat{\beta}_{3}(mig.status=R)$$
+
+$$\sim \widehat{extinct}_{i}=\hat{\beta}_{0} + \hat{\beta}_{1}nest.pair_{i}+\hat{\beta}_{3}$$
+We note that both these models have the same slope but have different intercept values, hence the difference in extinction times for the two species remains constant. Taking the difference in the response variable for the two models we can obtain the difference in extinction times to be $|\hat{\beta}_{3}-\hat{\beta}_{2}|=|4.3128-(-4.8545)|=9.17$ (to 2 decimal places).
+
+##(d) Testing For Equivalence of Factors 
+
+We can test whether the coefficients ` size` and ` mig.status` are the same by setting up the following hypothesis:
+
+$$H_{0}:|\beta_{3}|-|\beta_{2}|=0 , \ H_{A}:|\beta_{3}|-|\beta_{2}|\neq0$$
+
+Equivalently, we assess whether the model $Y_{i}=\beta_{0}+\beta_{1}X_{i1}+\beta_{*}(size+mig.status)+\varepsilon_{i}$ is significant. 
+
+```{r}
+size.1 <- ifelse(size=='S',1,0)
+mig.status.1 <- ifelse(mig.status=='R',1,0)
+d1 <- mig.status.1+size.1
+
+lm.extinct.1 <- lm(extinct ~ nest.pair + d1)
+anova(lm.extinct.1, lm.extinct)
+```
+
+From our ANOVA table, we have $p-value=0.01393<\alpha=0.05$, hence there is significant evidence to reject the null hypothesis in favour of the alternative hypothesis and thus conclude that size and migratory status are significantly different.
+
+##(e) Regression Diagnostics
+
+```{r echo=FALSE, fig.align='center', fig.height=2.5}
+par(mfrow= c(1, 2))
+plot(lm.extinct, which = c(1,2))
+```
+
+The residuals vs fitted values plot shows relatively strong heteroscedasticity , which provides a strong indication that our constant variance assumption $Var(\varepsilon_{i})=\sigma^{2}$ doesn't hold in our sample. We also note that there is a general decreasing trend in the mean of the residuals corresponding to higher fitted values due to higher concentrations of data towards the negative values. Upon further examination, we can see that a few observations, particularly the 1st, 28th and 60th observations do appear to induce a positive bias on the residual mean. Looking further at the standardised residuals plot, these observations do appear to be significantly deviated away from the normal line hinting that these points may be potential outliers, although the vast majority of observations remain on the normal line, as per our normality assumption. However, the presence of these potential outliers may indicate that our assumption $\mathbb{E}(\varepsilon_{i})=0$ doesn't hold in our sample.
+
+We can support our analysis by conducting a Shapiro Wilk Test in R:
+
+```{r}
+shapiro.test(residuals(lm.extinct))
+```
+We obtain $p-value=1.601\times 10^{-9}<<\alpha=0.05$ hence we reject our null hypothesis and conclude that the residuals are not normally distributed, therefore breaking our model assumption $\varepsilon_{i}\stackrel{iid}\sim N(0,\sigma^{2})$.
+
+```{r echo=FALSE, fig.align='center', fig.height=3}
+par(mfrow=c(1,3))
+plot(hatvalues(lm.extinct), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(lm.extinct)) / length(extinct), col = 'red')
+plot(lm.extinct, which = 4)
+library(faraway)
+halfnorm(hatvalues(lm.extinct), ylab = 'Leverages')
+```
+
+Furthering our analysis, we notice by from the cooks distance, that observations 28 and 60, which we previously identified as potential outliers, possesses relatively high cooks distances. Observation 28 however possesses relatively low leverage as observed from the leverage plot of the hat values, which leaves observation 60 to be of concern as it greatly exceeds our $2\frac{p}{n}=\frac{8}{62}$ cut-off level. By observing the half-normal plot for leverages, it becomes very clear that observation 60, which corresponds to the *Starling* species of bird, is highly influential on the fit of our model, and should be of major concern. 
+
+##(f) Examining Transformations
+
+We would like to analyse the fit of two transformations:
+
+$$\displaystyle log(extinct)_{i}=\beta_{0} + \beta_{1}nest.pair_{i}+\beta_{2}size_{i} + \beta_{3}mig.status_{i}+\varepsilon_{i}$$
+
+$$\displaystyle extinct^{-1}_{i}=\beta_{0} + \beta_{1}nest.pair_{i}+\beta_{2}size_{i} + \beta_{3}mig.status_{i}+\varepsilon_{i}$$
+```{r}
+trans.extinct.1 <- lm(log(extinct) ~ nest.pair + factor(size) + factor(mig.status))
+trans.extinct.2 <- lm((1/extinct) ~ nest.pair + factor(size) + factor(mig.status))
+```
+
+Outputting a summary table in R for both models (see in appendix) we can immediately observe an overwhelming improvement in the significance of the fit of both model transformations. Firstly, we see that all estimated coefficients in the transformed models are statistically significant, whereas only the predictor *nested.pairs* was significant in the original model. Looking at the adjusted R-squared measure, both transformed models explain more than 50% of the variability in the data, compared with the original model explaining only 23.14% of the variability.
+
+```{r echo=FALSE, fig.align='center', fig.height=3.5}
+par(mfrow= c(2, 2))
+plot(trans.extinct.1, which = c(1,2))
+plot(hatvalues(trans.extinct.1), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(trans.extinct.1)) / length(extinct), col = 'red')
+plot(trans.extinct.1, which = 4)
+```
+
+Assessing the diagnostics plot of the *log(extinct)* transformed model, we can observe several characteristics that indicate an improvement on the model fit. Firstly, the mean residual value across fitted values remains close to 0 and the variability in the residuals is more consistent, supporting our model assumptions $\mathbb{E}(\varepsilon_{i})=0$ and $Var(\varepsilon_{i})=\sigma^{2}$. Although we can observe slightly fat tails in the distribution of residuals via the quantile-quantile plot, these deviations don't appear to be too significant, and thus we shouldn't be too concerned about our normality assumption. Our only concern however pertains to observation 60, which just like in the original model, appears to possess high leverage, as indicated by its leverage score and cooks distance.
+
+```{r echo=FALSE, fig.align='center', fig.height=3.5}
+par(mfrow= c(2, 2))
+plot(trans.extinct.2, which = c(1,2))
+plot(hatvalues(trans.extinct.2), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(trans.extinct.2)) / length(extinct), col = 'red')
+plot(trans.extinct.2, which = 4)
+```
+
+Furthermore, by examining the diagnostic plots of the *1/extinct* transformed model, we notice that although the residuals are more evenly distributed than those of the original model, there is slight non-linearity in the trend across fitted values, however this is most likely insignificant overall. The quantile-quantile plot appears to support our normality assumption better than the preceding model, and our cooks distances are less significant. We also note that although observation 60 possesses a high leverage score just like in the previous two models, its cooks distance is less significant and therefore its overall impact on the model fit shouldn't be of concern. Overall it appears that this model is the superior of the two transformations based on our analysis.
+
+\pagebreak 
+
+#Appendix
+
+##1)
+
+```{r }
+pollution <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 1/STAT2008- Regression Modelling/Assignments/Assignment 2/pollution.csv")
+bird <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 1/STAT2008- Regression Modelling/Assignments/Assignment 2/bird.csv")
+attach(pollution)
+```
+
+```{r}
+lm.mortality <- lm(mortality ~ precipitation + education + nonwhite + nox + so2)
+lm.mortality
+```
+
+```{r}
+anova(lm.mortality)
+```
+
+```{r}
+p.value <- 1-pf(4.646, df1 = 5, df2 = 24)
+p.value
+```
+
+```{r}
+summary(lm.mortality)
+```
+
+T-Test for Model Coefficients
+           
+  $\beta_{i}$              |       test statistic       |          p-value 
+-------------------------- | -------------------------- | --------------------------
+$\hat{\beta_{0}}$          | 8.540                      | $9.74\times10^{-9}$
+$\hat{\beta_{1}}$          | 1.536                      | 0.138
+$\hat{\beta_{2}}$          | -1.502                     | 0.146
+$\hat{\beta_{3}}$          | 0.724                      | 0.476
+$\hat{\beta_{4}}$          | 1.662                      | 0.110
+$\hat{\beta_{5}}$          | -0.943                     | 0.355
+
+```{r}
+lm.mortality.small <- lm(mortality ~ precipitation + nonwhite + so2)
+lm.mortality.full <- lm(mortality ~ precipitation + education + nonwhite + nox + so2)
+anova(lm.mortality.small, lm.mortality.full)
+```
+
+
+```{r}
+b.0 <- mean(mortality)-(2*mean(precipitation) - 10*mean(education) 
+      + 3*mean(nonwhite) + 0*mean(nox) + 1*mean(so2))
+b.0
+```
+
+```{r}
+predict(lm.mortality.full, newdata = data.frame(precipitation = 33, education = 11.5,
+        nonwhite = 17.2, nox = 1, so2 = 1), interval = 'prediction', level = 0.99)
+```
+
+##2)
+
+```{r}
+lm.extinct <- lm(extinct ~ nest.pair + factor(size) + factor(mig.status))
+lm.extinct
+```
+
+```{r}
+lm.extinct.small <- lm(extinct ~ nest.pair)
+lm.extinct.full <- lm(extinct ~ nest.pair + factor(size) + factor(mig.status))
+anova(lm.extinct.small, lm.extinct.full)
+```
+
+```{r}
+size.1 <- ifelse(size=='S',1,0)
+mig.status.1 <- ifelse(mig.status=='R',1,0)
+d1 <- mig.status.1+size.1
+
+lm.extinct.1 <- lm(extinct ~ nest.pair + d1)
+anova(lm.extinct.1, lm.extinct)
+```
+
+```{r echo=FALSE, fig.align='center', fig.height=2.5}
+par(mfrow= c(1, 2))
+plot(lm.extinct, which = c(1,2))
+```
+
+```{r}
+shapiro.test(residuals(lm.extinct))
+```
+
+```{r echo=FALSE, fig.align='center', fig.height=3}
+par(mfrow=c(1,3))
+plot(hatvalues(lm.extinct), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(lm.extinct)) / length(extinct), col = 'red')
+plot(lm.extinct, which = 4)
+library(faraway)
+halfnorm(hatvalues(lm.extinct), ylab = 'Leverages')
+```
+
+Summary Table For Transformed Models (2f):
+
+```{r}
+summary(trans.extinct.1)
+summary(trans.extinct.2)
+```
+
+```{r}
+trans.extinct.1 <- lm(log(extinct) ~ nest.pair + factor(size) + factor(mig.status))
+trans.extinct.2 <- lm((1/extinct) ~ nest.pair + factor(size) + factor(mig.status))
+```
+
+```{r echo=FALSE, fig.align='center', fig.height=3.5}
+par(mfrow= c(2, 2))
+plot(trans.extinct.1, which = c(1,2))
+plot(hatvalues(trans.extinct.1), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(trans.extinct.1)) / length(extinct), col = 'red')
+plot(trans.extinct.1, which = 4)
+```
+
+```{r echo=FALSE, fig.align='center', fig.height=3.5}
+par(mfrow= c(2, 2))
+plot(trans.extinct.2, which = c(1,2))
+plot(hatvalues(trans.extinct.2), type = 'h', ylab = 'Leverage Scores', xlab = 'Obs. number')
+abline(h = 2 * sum(hatvalues(trans.extinct.2)) / length(extinct), col = 'red')
+plot(trans.extinct.2, which = 4)
+```
