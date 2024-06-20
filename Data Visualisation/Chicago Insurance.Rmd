@@ -1,0 +1,203 @@
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+load("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 2/STAT3011- Graphical Data Analysis/classdata (1).RData")
+insure <- as.data.frame(insure)
+attach(insure)
+library(psych)
+library(ggplot2)
+library(RColorBrewer)
+library(usethis)
+library(Rcpp)
+library(devtools)
+library(choroplethrZip)
+library(pander)
+library(gridExtra)
+library(knitr)
+```
+
+##Insurance availability in Chicago
+
+>The U.S. Commission on Civil Rights collected data in an attempt to
+examine charges that insurance companies were "redlining" certain
+neighbourhoods.  i.e.  cancelling and/or refusing to renew policies.
+The data provided include the number of cancellations, nonrenewals, new
+policies and renewals of home and fire policies for each neighbourhood
+by zip code for the months December 1977 - February 1978.  This
+information is combined into a single variable denoted Voluntary market
+activity which is the number of new policies and renewals minus the
+number of cancellations and nonrenewals expressed per 100 housing
+units.  In addition, information on the number of FAIR plan policies
+was obtained.  These policies are obtained after applicants have been
+rejected for other policies so this information also reflects the
+availability of policies.  This information is provided as the
+involuntary market activity, the number of FAIR plan policies and
+renewals per 100 housing units.  In addition, the Chicago Police
+provided theft data and the Fire Department provided fire data from
+1975 for each neighbourhood.  These data are the number of incidents
+per 1000 housing units in 1975.  (The insurance companies claim to use
+a three year lag on crime data when they set their premiums.) Finally,
+the Census Bureau provide data on the racial composition (in per cent
+minority), income and the age of housing units.  The income is the
+median family income and the age is coded as the percentage of units
+built in or before 1939.
+
+>The objectives of the study are to explore the extent to which racial
+composition and age of housing affect underwriting practices after
+controlling for factors like fire and theft.
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE, fig.width=9, fig.height=9, fig.align='center', fig.cap="Scatterplot matrix of Chicago insurance data, showcasing the bivariate relationships between voluntary and involuntary insurance market activity and factors such as theft and fire incidents, age of housing units, median income and percentage of minority racial composition."}
+pairs.panels(insure, method = 'pearson', density = TRUE , smooth = TRUE, ellipses = FALSE, cor = TRUE, scale = TRUE, cex.cor = 2, hist.col = '#00AFBB', rug = FALSE)
+```
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE, results=FALSE}
+a0 <- as.character(insure$Zip)
+a1 <- as.numeric(c(insure$Volun, insure$Invol))
+a2 <- as.factor(c(rep('2',length(insure$Volun)), rep('1', length(insure$Invol))))
+policy.data <- as.data.frame(cbind(a0,a2,a1))
+colnames(policy.data) <- c('Zip code', 'Policy type', 'Active policies per 100 housing units')
+policy.data$`Policy type` <- as.factor(policy.data$`Policy type`)
+levels(policy.data$`Policy type`)[levels(policy.data$`Policy type`)==2] <- 'Voluntary'
+levels(policy.data$`Policy type`)[levels(policy.data$`Policy type`)==1] <- 'Involuntary'
+policy.data$`Zip code` <- as.factor(policy.data$`Zip code`)
+policy.data$`Active policies per 100 housing units` <- as.numeric(policy.data$`Active policies per 100 housing units`)
+View(policy.data)
+```
+
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE}
+ggplot(policy.data, aes(x = reorder(policy.data$`Zip code`, policy.data$`Active policies per 100 housing units`), y = policy.data$`Active policies per 100 housing units`, fill = policy.data$`Policy type`)) + geom_bar(alpha = 0.5, lwd = 0.2, position=position_dodge(), stat="identity") + labs(x = 'Zip Code') + ggtitle('Active Policies Per 100 Households') + theme_classic() + theme(legend.position = 'bottom', legend.title = element_blank(), plot.title = element_text(hjust = 0.5), legend.spacing.x = unit(0.5, 'cm'), axis.title.y = element_blank(), axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.ticks.x = element_line(size = 0.3), axis.line.x = element_line(size = 0.3)) +  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + theme(axis.text.y = element_text(angle = 90, hjust = 1))
+
+```
+
+>Figure 2: Comparison between voluntary and involuntary insurance market activity. Involuntary market
+activity is the number of new policies and renewals minus the
+number of cancellations and nonrenewals expressed per 100 housing
+units. Involuntary market activity is the number of FAIR plan policies and
+renewals per 100 housing units.
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE, fig.width=10, fig.height=16}
+
+col1.0 <- insure$Zip
+col2.0 <- insure$Theft
+theft.data <- as.data.frame(cbind(col1.0,col2.0))
+colnames(theft.data) <- c('region', 'value')
+theft.data$region <- as.character(theft.data$region)
+theft.data$value <- as.numeric(theft.data$value)
+theft.data[18,1] <- '60827'
+theft.data[45,1] <- '60707'
+
+choro.theft <- ZipChoropleth$new(theft.data)
+choro.theft$ggplot_scale <- scale_fill_brewer(name='Thefts per 1000 houses', palette = 'BuPu', drop=FALSE)
+choro.theft$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+
+col1 <- insure$Zip
+col2 <- insure$Fire
+fire.data <- as.data.frame(cbind(col1,col2))
+colnames(fire.data) <- c('region', 'value')
+fire.data$region <- as.character(fire.data$region)
+fire.data$value <- as.numeric(fire.data$value)
+fire.data[18,1] <- '60827'
+fire.data[45,1] <- '60707'
+
+choro.fire <- ZipChoropleth$new(fire.data)
+choro.fire$ggplot_scale <- scale_fill_brewer(name='Fires per 1000 houses', palette = 'YlOrRd', drop=FALSE)
+choro.fire$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+
+col1.2 <- insure$Zip
+col2.2 <- insure$Income
+inc.data <- as.data.frame(cbind(col1.2,col2.2))
+colnames(inc.data) <- c('region', 'value')
+inc.data$region <- as.character(inc.data$region)
+inc.data$value <- as.numeric(inc.data$value)
+inc.data[18,1] <- '60827'
+inc.data[45,1] <- '60707'
+
+choro.inc <- ZipChoropleth$new(inc.data)
+choro.inc$ggplot_scale <- scale_fill_brewer(name='Median household income', palette = 'Blues', drop=FALSE, direction = -1)
+choro.inc$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+col1.3 <- insure$Zip
+col2.3 <- insure$Race
+race.data <- as.data.frame(cbind(col1.3,col2.3))
+colnames(race.data) <- c('region', 'value')
+race.data$region <- as.character(race.data$region)
+race.data$value <- as.numeric(race.data$value)
+race.data[18,1] <- '60827'
+race.data[45,1] <- '60707'
+
+choro.race <- ZipChoropleth$new(race.data)
+choro.race$ggplot_scale <- scale_fill_brewer(name='Per cent minority', palette = 'PuRd', drop=FALSE)
+choro.race$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+
+
+
+col1.1 <- insure$Zip
+col2.1 <- insure$Age
+age.data <- as.data.frame(cbind(col1.1,col2.1))
+colnames(age.data) <- c('region', 'value')
+age.data$region <- as.character(age.data$region)
+age.data$value <- as.numeric(age.data$value)
+age.data[18,1] <- '60827'
+age.data[45,1] <- '60707'
+
+choro.age <- ZipChoropleth$new(age.data)
+choro.age$ggplot_scale <- scale_fill_brewer(name='Per cent old houses', palette = 'YlGn', drop=FALSE)
+choro.age$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+
+col1.4 <- insure$Zip
+col2.4 <- insure$Invol
+inv.data <- as.data.frame(cbind(col1.4,col2.4))
+colnames(inv.data) <- c('region', 'value')
+inv.data$region <- as.character(inv.data$region)
+inv.data$value <- as.numeric(inv.data$value)
+inv.data[18,1] <- '60827'
+inv.data[45,1] <- '60707'
+
+choro.inv <- ZipChoropleth$new(inv.data)
+choro.inv$ggplot_scale <- scale_fill_brewer(name='FAIR plans per 100 houses', palette = 'YlOrBr', drop=FALSE)
+choro.inv$set_zoom_zip(state_zoom =NULL, county_zoom=NULL, msa_zoom=NULL, zip_zoom = c('60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614',
+                            '60615', '60616', '60617', '60618', '60619', '60620', '60621', '60622',
+                            '60623', '60624', '60625', '60626', '60628', '60629', '60630', '60827',
+                            '60631', '60632', '60633', '60634', '60636', '60637', '60638', '60707',
+                            '60639', '60640', '60641', '60643', '60644', '60645', '60646', '60647',
+                            '60649', '60651', '60652', '60653', '60655', '60656', '60657'))
+
+grid.arrange(choro.theft$render(), choro.fire$render(), choro.inc$render(), choro.race$render(), choro.age$render(), choro.inv$render(), ncol=2, nrow=3)
+```
+
+>Figure 3: Chicago Zip code maps for insurance data. Top left: Theft occurrences per 1000 housing units in Chicago, 1975. Top right: Fire incidents per 1000 housing units in Chicago, 1975. Centre left: Median family income census data. Centre right: Racial composition (in per cent minority). Bottom left: Percentage of housing units built in or before 1939. Bottom right: Data on involuntary market activity (number of FAIR plan policies and renewals per 100 housing units).
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE}
+ggplot(insure, aes(x = Income, y = Theft, colour = Race))+geom_point(shape = 19, size = 3, alpha = 0.6) +scale_colour_gradient(low = "orange", high = "brown")+labs(x = 'Median Household Income', y= 'Theft incidents Per 1000 Houses)')+ggtitle('Relationship between thefts, race and income')+theme_light()
+```
+
+>Figure 4: We can see from the above plot that theft incidences decrease as median household income increases. We also find that thefts occur more frequently in neighbourhoods where minority groups are more prevalent. 
+
+```{r, echo=FALSE,  message=FALSE, warning=FALSE}
+ggplot(insure, aes(x = Income, y = Volun, colour = Age))+geom_point(shape = 19, size = Race/10, alpha = 0.6) +scale_colour_gradient(low = "yellow3", high = "darkgreen")+labs(x = 'Median Household Income', y= 'Voluntary Market Activity)')+theme_light()
+```
+
+>Figure 5: Relationship active voluntary insure policies, race, age and income. We see that voluntary market activity shares a positive relationship with median household income. The area of the plotting circles corresponds to the per cent minority population, which highlights a general decrease in incomes and voluntary market activity as percentage increases. 

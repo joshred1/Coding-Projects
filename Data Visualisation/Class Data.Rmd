@@ -1,0 +1,86 @@
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+load("C:/Users/Joshua/Downloads/classdata.RData")
+library(ggplot2)
+library(plotly)
+library(reshape2)
+library(plyr)
+library(gridExtra)
+
+h.soprano.1 <- singers$soprano.1
+h.soprano.2 <- singers$soprano.2
+h.alto.1 <- singers$alto.1
+h.alto.2 <- singers$alto.2
+h.tenor.1 <- singers$tenor.1
+h.tenor.2 <- singers$tenor.2
+h.bass.1 <- singers$bass.1
+h.bass.2 <- singers$bass.2
+height <- c(h.soprano.1, h.soprano.2, h.alto.1, h.alto.2, h.tenor.1, h.tenor.2, h.bass.1, h.bass.2)
+vocal.groups. <- c(rep('soprano.1', length(singers$soprano.1)), rep('soprano.2', length(singers$soprano.2)), rep('alto.1', length(singers$alto.1)), rep('alto.2', length(singers$alto.2)), rep('tenor.1', length(singers$tenor.1)), rep('tenor.2', length(singers$tenor.2)), rep('bass.1', length(singers$bass.1)), rep('bass.2', length(singers$bass.2)))
+vocal.groups <- revalue(vocal.groups., c('soprano.1'='soprano 1', 'soprano.2'='soprano 2', 'alto.1'='alto 1', 'alto.2'='alto 2', 'tenor.1'='tenor 1', 'tenor.2'='tenor 2', 'bass.1'='bass 1', 'bass.2'='bass 2'))
+singer.matrix <- cbind(vocal.groups, height)
+singer.data <- as.data.frame(singer.matrix)
+singer.data$height <- as.numeric(as.character(singer.data$height))
+colnames(singer.data) <- c('vocal group', 'height')
+singer.data
+
+h.females <- c(h.soprano.1, h.soprano.2, h.alto.1, h.alto.2)
+h.males <- c(h.tenor.1, h.tenor.2, h.bass.1, h.bass.2)
+height.genders <- c(h.females, h.males)
+vocal.genders <- c(rep('females', length(singers$soprano.1)+length(singers$soprano.2)+length(singers$alto.1)+length(singers$alto.2)), rep('males', length(singers$tenor.1)+length(singers$tenor.2)+length(singers$bass.1)+length(singers$bass.2)))
+gender.matrix <- cbind(vocal.genders, height.genders)
+gender.data <- as.data.frame(gender.matrix)
+gender.data$height.genders <- as.numeric(as.character(gender.data$height.genders))
+colnames(gender.data) <- c('gender', 'height')
+gender.data
+
+h.sopranos <- c(h.soprano.1, h.soprano.2)
+h.altos <- c(h.alto.1, h.alto.2)
+h.tenors <- c(h.tenor.1, h.tenor.2)
+h.bass <- c(h.bass.1, h.bass.2)
+height.class <- c(h.sopranos, h.altos, h.tenors, h.bass)
+vocal.class <- c(rep('soprano', length(singers$soprano.1)+length(singers$soprano.2)), rep('alto', length(singers$alto.1)+length(singers$alto.2)), rep('tenor', length(singers$tenor.1)+length(singers$tenor.2)), rep('bass', length(singers$bass.1)+length(singers$bass.2)))
+class.matrix <- cbind(vocal.class, height.class)
+class.data <- as.data.frame(class.matrix)
+class.data$height.class <- as.numeric(as.character(class.data$height.class))
+colnames(class.data) <- c('vocal class', 'height')
+class.data
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+singer.data$`vocal group` <- factor(singer.data$`vocal group`, levels = c('bass 2', 'bass 1', 'tenor 2', 'tenor 1', 'alto 2', 'alto 1', 'soprano 2', 'soprano 1'))
+ggplot(singer.data, aes(x = `vocal group`, y = singer.data$height))+geom_boxplot(aes(fill = singer.data$`vocal group`), alpha = 0.5, lwd = 0.3)+stat_summary(fun.y = mean, geom = 'point', shape = 19, size = 3, alpha = 0.5)+labs(x = 'Vocal Group',y = 'Height (inches)')+ggtitle('Relationship Between Vocal Pitch and Singer Height', subtitle = 'New York Choral Society, 1979')+theme_light()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+
+```
+
+>Fig. 1. *Boxplots of the distributions of height across vocal groups. The singers have been arranged into groups of ascending order in terms of pitch, from which we can clearly see a general negative relationship between singer height and vocal pitch.*
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(gender.data, aes(x = gender.data$height, fill = gender))+geom_density(alpha = 0.5, lwd = 0.3)+xlim(min(gender.data$height)-2.5,max(gender.data$height)+2.5)+labs(x = 'Height (inches)')+ggtitle('Distribution of Height for Male and Female Singers')+theme_classic()+theme(legend.position = 'bottom', legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), plot.title = element_text(hjust = 0.5), axis.title.y = element_blank(), axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.ticks.x = element_line(size = 0.3), axis.line.x = element_line(size = 0.3))
+
+```
+
+>Fig. 2. *Overlayed densities of the distribution of height for gender. From the dataset, the bass and tenor classifications correspond to the male vocalists and likewise the alto and soprano classifications correspond to the female vocalists.*
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+class.data$`vocal class` <- factor(class.data$`vocal class`, levels = c('bass', 'tenor', 'alto', 'soprano'))
+ggplot(class.data, aes(x = class.data$height, fill = `vocal class`))+geom_density(alpha = 0.7, lwd = 0.3)+facet_wrap(facets = class.data$`vocal class`, nrow = c(4,1))+xlim(min(class.data$height)-2,max(class.data$height)+2)+labs(x = 'Height (inches)')+ggtitle('Height Distributions Across Vocal Classifications')+theme_classic()+theme(strip.text.x = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.position = 'right', legend.title = element_blank(), plot.title = element_text(hjust = 0.5), axis.title.y = element_blank(), axis.text.y = element_blank(), axis.line.y = element_blank(), axis.ticks.y = element_blank(), axis.ticks.x = element_line(size = 0.3), axis.line.x = element_line(size = 0.3))+scale_fill_hue(c = 150)
+
+```
+
+>Fig. 3. *Density plots of the distribution of heights across the four vocal classifications: soprano, alto, tenor, and bass.*
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+singer.lm <- lm(height ~ `vocal group`, data = singer.data)
+gender.lm <- lm(height ~ gender, data = gender.data)
+class.lm <- lm(height ~ `vocal class`, data = class.data)
+
+q1 <- ggplot(singer.lm, aes(sample = singer.data$height))+stat_qq()+stat_qq_line()+labs(x = 'theoretical quantiles',y = 'Sample Quantiles')+theme_light()+theme(legend.position = 'none', aspect.ratio = 1)+geom_hline(yintercept = median(singer.data$height))
+q2 <- ggplot(gender.lm, aes(sample = gender.data$height))+stat_qq()+stat_qq_line()+labs(x = 'theoretical quantiles', y = '')+theme_light()+theme(legend.position = 'none', aspect.ratio = 1)+geom_hline(yintercept = median(gender.data$height))
+q3 <- ggplot(class.lm, aes(sample = class.data$height))+stat_qq()+stat_qq_line()+labs(x = 'theoretical quantiles',y = '')+theme_light()+theme(legend.position = 'none', aspect.ratio = 1)
+grid.arrange(q1, q2, q3, ncol = 3)+geom_hline(yintercept = median(class.data$height))
+```
+
+
+>Fig. 4. *QQ plots of heights against the standard normal distribution. On the left is a normal quantile-quantile plot of the data for a linear model for height fitted against the 8 factors for each of the vocal groups. In the centre, is the corresponding qq-plot of a linear regression model for height fitted against the 4 main categories, and on the left is the qq-plot for the linear model of height fitted against the gender covariates. we can see that the data in these models have apparent light-tails but remain relatively normally distributed.*
+ 
