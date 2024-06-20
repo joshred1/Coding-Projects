@@ -1,0 +1,287 @@
+---
+title: 'Generalised Linear Modelling: Assignment 1'
+author: "Joshua Redolfi"
+date: "24 August 2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+***
+
+#Question 1
+
+>Robert O. Kuehl in his text Design of Experiments: Statistical Principles of Research Design
+and Analysis (2nd edn, Brooks/Cole, 2000, p.574) describes an experiment conducted in a
+randomized complete block design to study the effect of natural control, Bacillus, and a
+standard chemical insecticide for control of hornworm infestations on a crop plant.
+The treatments included four sources of Bacillus (Treatment = Bacillus1 to Bacillus4), a
+standard chemical (Treatment = Chemical), and no treatment (Treatment = Control). The
+treatments were applied to plants grown in field plots (Block = 1, 2, 3 & 4). The number of
+hornworms (Count) on each plant were counted prior to treatment. The number of live
+hornworms (Live) were counted 20 hours after application of the treatment.
+
+##(a)
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+hornworms <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 2/STAT3015- Generalised Linear Modelling/Assignments/hornworms.csv")
+attach(hornworms)
+```
+
+We begin our analysis by fitting the following ANCOVA model:
+
+$$Y_{ijk}=\mu_{i}+\nu_{j}+\beta X_{ijk} + \epsilon_{ijk}, \ \epsilon_{ijk}\stackrel{iid}\sim N(0,\sigma^{2})$$
+where,
+
+$$i=\{1,2,3,4\}$$ denotes the level of blocks
+$$j=\{1,2,3,4,5,6\}$$ denotes the treatment level
+$$k=\{1,...,24\}$$ replications for the 4x6=24 observations for count
+
+```{r, message=FALSE, warning=FALSE}
+mod1 <- lm(Live ~ factor(Treatment) + factor(Block) + Count)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(1,2))
+plot(mod1, which = c(1,2))
+var(Treatment)
+var(Block)
+var(Count)
+var(Count)/var(Block)
+```
+
+Upon careful observation of the residuals vs fitted plot we notice that the data are more densely clustered for higher fitted values which may be a concern for homoscedasticity of the data, however this is likely the result of a relatively small sample size. Taking the ratio of group with the higest variance to the group with the lowest we obtain `r var(Count)/var(Block)` > 3 as a rule of thumb, an issue with constant variance may be a strong issue in this model. Although the lowess curve has a slight downward slope, the mean appears to be relatively centred at 0, thereby indicating that $\mathbb{E}(\epsilon_{i})=0$. Observations 4, 11 and 21 may be potential outliers, however this would have to be confirmed using further diagnostics plots.
+
+From observing the normal quantile-quantile plot, we notice a relatively strong deviation in the lower tail of the distribution induced by the three points we identified in the residuals vs fitted plot as potential outliers. These points lie slightly beyond 2 standard deviations from the mean, resulting in a distribution with a negative skew. 3/24= 12.5% of the lie outside the $\pm2$ range which may be a cause for concern.
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(1,2))
+plot(mod1, which = c(4,5))
+```
+
+The Cook's Distance plot shows that observations 4, 11 and 21 have discernibly high cook's distance in comparison to the other values. Our previous residual plot analysis confirmed that these points are indeed likely problematic outliers however these cook's distances aren't too extreme
+
+Although there a points with relatively high leverage, none of the observations exceed the 0.5 cook's distance cut-off level suggesting no issues with leverage. However the data appears clustered in the positive end of the residuals distribution, suggesting an issue with constant variance as identified earlier.
+
+##(b)
+
+```{r}
+anova(lm(Live ~ factor(Block) + factor(Treatment) + Count))
+```
+
+We want to conduct the following hypothesis test to assess the significance of *Block* in the model:
+
+$$H_{0}:\mu_{i}=0 \ \forall i, \  H_{A}: \mu_{i}\neq0 \ for \  at \ least \ one \ i$$
+
+By fitting the Block covariate first in the model, we are able to assess the significance of this predicor given that no other covariate is fitted in the model. From the above analysis of variance table, we see that the $p-value = 0.006025 < \alpha = 0.05$, hence there is significant evidence to reject the hull hypothesis in favour of the alternative and conclude that Block is an important fixed factor in the model. Thus it is unecessary to remove this factor from the model.
+
+##(c)
+
+We now proceed to fit the following mixed effects model:
+
+$$Y_{ijk}=\nu_{i}+b_{j} Z_{ijk}+\beta X_{ijk} + \epsilon_{ijk}$$ 
+
+Assuming,
+
+$$\epsilon_{ijk}\stackrel{iid}\sim N(0,\sigma^{2}), \\ b_{k}\stackrel{iid}\sim N(0,\psi^{2})$$
+
+where,
+$$i=\{1,2,3,4,5,6\}$$ denotes the level for fixed treament factor
+$$j=\{1,2,3,4\}$$ denotes the level for random effects block factor
+$$k=\{1,...,24\}$$ replications for the 4x6=24 ovservations for count
+
+```{r}
+library(nlme)
+lme1<- lme(Live ~ factor(Treatment) + Count, random = ~1|factor(Block))
+coef(mod1)
+summary(lme1)$coef
+```
+
+From comparing the coefficients of the two models we notice that the slope coefficients for the Treatment and Count explanatory variables are almost identical- only differing very slightly, which is captured in the new intercept parameter. However there appears to be a more significant change in the random effects variable *Block*, whose slopes are noticably smaller in magnitude.
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+sigma2 <-  1.008196^2
+residual.sigma2 <- 1.894154^2
+total.sigma <- sigma2 + residual.sigma2
+sigma2/total.sigma
+```
+From producing the summary table (available in the appendix) for the mixed effects model, we are able to obtain the inputs necessary to compute the intra-class correlation coefficient to be `r sigma2/total.sigma` which suggests that the block design is poorly effective in this experiment.
+
+##(d)
+
+Mixed Effect Models involving square root transformations to the *Live* and *Count* variables were undertaken and their summary and anova outputs are available in the appendix. It can be observed that by applying these transformations, we can improve the variability of the groups as indicated by a considerable decrease in the residual and intercept variances.Transformations allow us to modify the variability of the data and the distribution of residuals, as well as reduce the impact of previously influencial points. They can allow for a better model fit overall.
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+lme2 <- lme(sqrt(Live) ~ factor(Treatment) + Count, random = ~1|factor(Block))
+plot(lme2)
+```
+
+From observing the standardised residuals vs fitted plot for our mixed effects model involving a square root transformation to just the response variable *Live*, it appears that there hasn't been any considerable improvement to the fit of the data.The data still appears to be densely clustered for the higher fitted values which may likely be an issue for our constant variance assumption. However we do notice that all the data points lie within the $\pm2$ range, so it seems that the outliers from the original additive model are no longer a cause for concern.
+
+##(e)
+
+Fitting interaction terms into a linear model allows us to model interaction of one covariate with another- in other words, they allow us to test the assumption that the factors are independent of each other. Multiplicative Models involving interactions between the covariates were fitted and their summary and anova outputs are available in the appendix. It can be observed that for both multiplicative models fitted, there was a reduction to the residual sum of squares, and the adjusted r-squared values for all models are approximately the same.  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mod3 <- lm(Live ~ factor(Treatment)*Count + factor(Block))
+par(mfrow = c(1,2))
+plot(mod3, which = c(1,2))
+```
+
+From observing the residuals vs fitted plot for our multiplicative model involving an interaction term between *Treatment* and *Count*, we see that the data still appears to be densely clustered for the higher fitted values which may likely be an issue for our constant variance assumption.
+
+Looking at the normal quantile-quantile plot, we notice that all the data points lie within the $\pm2$ range, so it seems that the outliers from the original additive model are no longer a cause for concern. It also seems to be the case that the spread is less skewed, and closer to a normal distribution, thereby suggesting an improvement towards upholding our normality assumption.
+
+##(f)
+
+The researcher is conducting an experiment to study the effects of natural control, *Bacillus*, and a standard chemical insecticide for control of hormworm infestations on a crop plant. Thus it seems appropriate to fit a mixed-effects model, to account for the randomized complete block design, under the treatment coding constraint as this would allow us to compare the effects of the other treatments to the control group. We can achieve this by fitting the following model:
+
+
+$$Y_{ijk}=\mu_{i}+b_{j} Z_{ijk}+\beta X_{ijk} + \epsilon_{ijk} \ \  s.t. \ \mu_{1}=0. $$ 
+
+Assuming,
+
+$$\epsilon_{ijk}\stackrel{iid}\sim N(0,\sigma^{2}), \\ b_{k}\stackrel{iid}\sim N(0,\psi^{2})$$
+
+where,
+$$i=\{1,2,3,4,5,6\}$$ denotes the level for fixed treament factor. 
+$$j=\{1,2,3,4\}$$ denotes the level for random effects block factor
+$$k=\{1,...,24\}$$ replications for the 4x6=24 ovservations for count
+
+```{r, results='hide', message=FALSE, warning=FALSE}
+library(nlme)
+relevel(hornworms$Treatment, 'Control')
+lme5<- lme(Live ~ factor(Treatment) + Count, random = ~1|factor(Block))
+```
+
+We've used the relevel function in R to set the 'Control' level of the Treatment factor as the reference level, so that our desired model is fitted.
+
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(1,2))
+plot(lme5)
+```
+
+From observing the standardised residuals vs fitted plot for our mixed effects model, we see that the data still appears to be densely clustered for the higher fitted values which may likely be an issue for our constant variance assumption. The outliers that were initially a problem in some of the previous models aren't an issue in this model as all the data points lie within the $\pm2$ range and so are likely not a problem. It also seems to be the case that the spread is less skewed, and closer to a normal distribution, thereby suggesting an improvement towards upholding our normality assumption.
+
+```{r}
+anova(lme5)
+```
+
+Taking a look at the anova output for our selected model we also see that all parameters of the fitted model are significant, which in addition to the improved fit suggested by the standardised residuals vs fitted plot, provides a strong indication that our model is effective.
+
+##(g)
+
+```{r}
+coef(lme5)
+```
+
+Based on our chosen model, holding all other covariates constant, that all Bascillus types reduce the quantity of hormworms relative to the control group, as indicated by the negative slope parameters for all levels of the Treatment factor. 
+
+```{r}
+plot(Live ~ Count, main = 'Relationship Between Treatment and Hornworm Infestation', pty = 1)
+
+```
+
+
+-------
+
+#Appendix
+
+##(a)
+
+```{r}
+mod1 <- lm(Live ~ factor(Treatment) + factor(Block) + Count)
+summary(lm(Live ~ factor(Treatment) + factor(Block)), factor = 'contr.sum')
+summary(lm(Live ~ factor(Treatment) + factor(Block)))
+
+```
+
+```{r}
+par(mfrow = c(1,2))
+plot(mod1, which = c(1,2))
+var(Treatment)
+var(Block)
+var(Count)
+var(Count)/var(Block)
+```
+
+```{r}
+par(mfrow = c(1,2))
+plot(mod1, which = c(4,5))
+```
+
+##(b)
+
+```{r}
+anova(lm(Live ~ factor(Block) + factor(Treatment) + Count))
+```
+
+##(c)
+
+```{r}
+library(nlme)
+lme1<- lme(Live ~ factor(Treatment) + Count, random = ~1|factor(Block))
+coef(mod1)
+summary(lme1)
+```
+
+##(d)
+
+```{r}
+lme2 <- lme(sqrt(Live) ~ factor(Treatment) + Count, random = ~1|factor(Block))
+lme3 <- lme(Live ~ factor(Treatment) + sqrt(Count), random = ~1|factor(Block))
+lme4<- lme(sqrt(Live) ~ factor(Treatment) + sqrt(Count), random = ~1|factor(Block))
+
+summary(lme2)
+summary(lme3)
+summary(lme4)
+anova(lme1)
+anova(lme2)
+anova(lme3)
+anova(lme4)
+```
+
+```{r}
+plot(lme2)
+```
+
+##(e)
+
+```{r}
+mod2 <- lm(Live ~ factor(Treatment) + factor(Block)*Count)
+mod3 <- lm(Live ~ factor(Treatment)*Count + factor(Block))
+summary(mod1)
+summary(mod2)
+summary(mod3)
+anova(mod1)
+anova(mod2)
+anova(mod3)
+```
+
+```{r}
+par(mfrow = c(1,2))
+plot(mod3, which = c(1,2))
+```
+
+##(f)
+
+```{r}
+library(nlme)
+relevel(hornworms$Treatment, 'Control')
+lme5<- lme(Live ~ factor(Treatment) + Count, random = ~1|factor(Block))
+```
+
+```{r}
+par(mfrow = c(1,2))
+plot(lme5)
+```
+
+```{r}
+anova(lme5)
+```
+
+##(g)
+
+```{r}
+coef(lme5)
+```

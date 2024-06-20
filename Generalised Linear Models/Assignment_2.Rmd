@@ -1,0 +1,383 @@
+---
+title: 'Generalised Linear Modelling: Assignment 2'
+author: "Joshua Redolfi"
+date: "18 October 2019"
+output: pdf_document
+---
+
+***
+
+#Question 1
+
+>The probability of a male birth in humans is about 0.51. It has previously been noticed that the
+lower proportions of male births are observed when offspring are conceived at times of
+exposure to smog, floods, or earthquakes. Danish researchers hypothesized that sources of
+stress associated with severe life events may also have some bearing on the sex ratio. To
+investigate this theory they obtained the sexes of all 3,072 children who were born in
+Denmark between January 1, 1980 and December 31, 1992, to women who experienced the
+following kinds of severe life events in the year of the birth or the year prior to the birth: death
+or admission to hospital for cancer or heart attack of their partner or of their other children.
+They also obtained sexes on a sample of 20,337 births for mothers who did not experience
+these life stress episodes.
+
+##(a)
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+ex2117 <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 2/STAT3015- Generalised Linear Modelling/Assignments/Assignment 2/ex2117.csv")
+attach(ex2117)
+```
+
+We would like to assess whether there was a lower percentage of male births in the exposed group than there were in the control group. We can achieve this by fitting the following logistic regression model for binomial proportions using the logit link function to model the relationship between the response variable $\mu_{i}$ *Percentage of Male Births* and the  covariates *Group*:
+
+$$\mu_{i} \sim Bin(n,p_{i}), \ \mu_{i}=p_{i}$$
+
+$$\eta_{i}=g(\mu_{i})=log\bigg(\frac{\mu_{i}}{1-\mu_{i}}\bigg)=\beta_{0}+\beta_{1}\times group_{i}$$
+where, 
+
+$$group_{i}=\begin{cases}
+1 &if \ exposed \\ 0 &if \ control \end{cases} \\$$
+
+```{r, message=FALSE, warning=FALSE}
+proportion <- PctBoys/100
+male.glm1 <- glm(proportion ~ Group, family = binomial, weights = Number)
+summary(male.glm1)$coefficients
+```
+
+From the output in R, $\beta_{1}\approx-0.0928$, and so relative to the control group the odds of a male birth for the exposed group is $exp(\beta_{1})\approx$ `r round(exp(summary(male.glm1)$coefficients[2]),4)` times the odds of a male birth for the control group. 
+
+We can confirm the significance of this result by conducting the following hypothesis test for $\beta_{1}$ as follows:
+
+$$H_{0}:\beta_{1}=0 \ \ \  H_{1}: \beta_{1}\neq0$$
+From the above summary output, we see that the corresponding $p-value \approx 0.0165 < \alpha = 0.05$, hence there is significant evidence to reject the hull hypothesis in favour of the alternative and conclude that *Group* is a significant predictor of probability of birthing a male. 
+
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(2,2), mar = c(4,4.3,4,4.3))
+plot(male.glm1, which = c(1,2,4,5))
+```
+
+The Residuals vs Fitted plot doesn't appear to show too much of an issue with linearity, as indicated by the lowess curve which remains close to the zero line. Observation 5 may be an outlier however this is difficult to determine on a non-standardised scale.There may be issues with heteroscedasticity however it is important to note that these issues are likely due to there being a very small sample size.
+
+Again from the Normal Quantile-Quantile plot, observation 5 may be an outlier, however this is difficult to determine on a non-standardised scale. However, relative to the data, it may be contributing to a distict left tail thereby affecting the skewness of the distribution although this again is likely due to the limited sample size.
+
+The Cook's Distance and Residuals vs Leverage plots don't raise any concerns about influence. Observation 5 which we identified as a possible outlier, doesn't exceed the 0.5 Cook's distance level (infact it is far from it) and therefore shouldn't have any significant impact on our model fit. No observations have significantly high leverage (none exceed the $\frac{2p}{n}=0.8$ cut off value).
+
+##(b)
+
+We would like to assess whether the probability of male births in the exposed group decreases as the stress event gets closer in time to conception. We can achieve this by fitting the following logistic regression model for binomial proportions using the logit link function to model the relationship between the response variable $\mu_{i}$ *Percentage of Male Births* and the remodeled *avg.time* continuous covariate for our exposed group:
+
+$$\eta_{i}=g(\mu_{i})=log\bigg(\frac{\mu_{i}}{1-\mu_{i}}\bigg)=\beta_{0}+\beta_{1}\times avg.time_{i}$$
+
+```{r, results='hide', message=FALSE, warning=FALSE}
+expsd.data <- subset(ex2117, Group=='Exposed')
+expsd.data$Time <- as.numeric(c(14,9,3,0))
+avg.time <- expsd.data$Time
+```
+
+```{r, message=FALSE, warning=FALSE}
+expsd.propn <- expsd.data$PctBoys/100
+male.glm2 <- glm(expsd.propn ~ avg.time, family = binomial, weights = expsd.data$Number)
+summary(male.glm2)$coefficients
+```
+
+From the output in R, $\beta_{1}\approx 0.0104$, and so the odds of a male birth increases by a multiplicative factor of $exp(\beta_{1})\approx$ `r round(exp(summary(male.glm2)$coefficients[2]),4)` for every 1 month increase in average time to conception from the occurrence of the stress event.  
+
+We can confirm the significance of this result by conducting the following hypothesis test for $\beta_{1}$ as follows:
+
+$$H_{0}:\beta_{1}=0 \ \ \  H_{1}: \beta_{1}\neq0$$
+From the above summary output, we see that the corresponding $p-value \approx 0.3503 > \alpha = 0.05$, hence there is insignificant evidence to reject the hull hypothesis and thus we cannot conclude that *avg.time* is a significant predictor of probability of birthing a male.
+
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(2,2), mar = c(4,4.3,4,4.3))
+plot(residuals(male.glm2, type =  'deviance')~male.glm2$linear.predictors, xlab = 'Linear Predictors', ylab = 'Deviance Residuals', main = 'Deviance Residual Plot')
+abline(h=0, lty = 2)
+
+qqnorm(residuals(male.glm2, type =  'pearson'), ylab = 'Pearson Residual Quantiles', main = 'Normal Q-Q Plot')
+qqline(residuals(male.glm2,type =  'pearson'), lty = 3)
+abline(0,1)
+
+plot(male.glm2, which = c(4,5))
+```
+
+The Deviance Residuals vs Fitted plot doesn't appear to show too much of an issue with linearity. Since we've standardised the scale, we can see that there aren't any outliers in our model as all deviance residuals lie within $\pm2$ standard deviations of the mean 0 line.There may be issues with heteroscedasticity however it is important to note that these issues are likely due to there being a very small sample size.
+
+From the Normal Quantile-Quantile plot, all Pearson residuals lie within the (-2,+2) range, as we've seen from the deviance residuals vs linear predictors plot. There doesn't appear to be issues with our assumption of normality as the residuals appear to 'hug' the q-q line.
+
+The Cook's Distance and Residuals vs Leverage plots point out that observation 3 is highly influential as it exceeds our 0.5 Cook's distance level and therefore may be of concern. No observations have significantly high leverage (none exceed the $\frac{2p}{n}=1$ cut off value).
+
+##(c)
+
+We remodel the *avg.time* predictor to now account for the Control Group, and fit the logistic glm using the logit link function as follows:
+
+$$g(\mu_{i})=\beta_{0}+\beta_{1}\times avg.time_{i}$$
+
+```{r, results='hide', message=FALSE, warning=FALSE}
+modified.male <- ex2117
+modified.male$Time <- as.numeric(c(24,14,9,3,0))
+avg.time2 <- modified.male$Time
+```
+
+```{r, message=FALSE, warning=FALSE}
+modified.propn <- modified.male$PctBoys/100
+male.glm3 <- glm(modified.propn ~ avg.time2, family = binomial, weights = Number)
+summary(male.glm3)$coefficients
+```
+
+From the output in R, $\beta_{1}\approx 0.0049$, which is about half its value in our model fitted in part (b). It's corresponding z quantile and p-value however are of much greater significance. Whereas in part (b) our *avg.time* covariate was insignificant at the $\alpha=0.05$ level, after modifying for control group, its $p-value=0.0116<0.05$ and thus we can confirm that average time is a significant predictor for the percentage of male births. Our intercept parameter $\beta_{0}$ increases slightly from -0.0915 to -0.0700 and its corresponding z quantile is still statistically insignificant.
+
+##(d)
+
+We would like the plot the following function, as our back-transformed model for probability (percentage) of male births fitted in part (c) against time. This is achieved via the invlogit function:
+
+$$\mu_{i}=g^{-1}(\eta_{i})=\frac{e^{\eta_{i}}}{1+e^{\eta_{i}}}$$
+
+where,
+
+$$\eta_{i}=\beta_{0}+\beta_{1}\times avg.time_{i}$$
+
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+invlogit <- function(x){exp(x)/(1+exp(x))}
+
+probs <- seq(0,1,0.01)
+time <- seq(0,30,0.01*30)
+plot(probs ~ time, type = 'n', xlab = 'Time (months)', ylab = 'Percentage of Male Births', main = 'Male Births and Average Time Prior to Conception')
+points(modified.propn ~ avg.time2)
+lines(x = time, y = invlogit(coef(male.glm3)[1]+coef(male.glm3)[2]*time), col = 'blue')
+y0 <- predict(male.glm3, newdata = list(avg.time2 = time), type = 'link', se.fit = T)
+
+add.ci <- function(object, fit.se, conf.level=0.95){
+  fit <- fit.se$fit
+  se.fit <- fit.se$se.fit
+  residual.scale <- fit.se$residual.scale
+  pi.se <- sqrt(residual.scale^2 + se.fit^2) 
+  tquantile <- qt(1 - (1 - conf.level)/2, object$df.residual)
+  ci.fit <- cbind(lower = fit - tquantile*se.fit, upper = fit + tquantile*se.fit)
+  pi.fit <- cbind(lower = fit - tquantile*pi.se, upper = fit + tquantile*pi.se)
+  list(fit = fit, se.fit = se.fit, residual.scale = residual.scale, ci.fit = ci.fit, pi.fit = pi.fit)
+}
+
+y0 <- add.ci(male.glm3, y0)
+invlogit(y0$ci.fit)
+
+lines(x = time, y = invlogit(y0$ci.fit[,'lower']), lty = 2)
+lines(x = time, y = invlogit(y0$ci.fit[,'upper']), lty = 2)
+```
+
+From the above plot we can observe that the percentage of male births lies within a relatively narrow range between (0.45,0.55). The 95% confidence interval bands appear relatively narrow although it broadens quite noticeable for lower values of time.
+
+```{r, echo = FALSE, results='hide', message=FALSE, warning=FALSE}
+plot(probs ~ time, type = 'n', ylim = c(0.45,0.54), xlab = 'Time (months)', ylab = 'Percentage of Male Births', main = 'Male Births and Average Time Prior to Conception')
+points(modified.propn ~ avg.time2)
+lines(x = time, y = invlogit(coef(male.glm3)[1]+coef(male.glm3)[2]*time), col = 'blue')
+y0 <- predict(male.glm3, newdata = list(avg.time2 = time), type = 'link', se.fit = T)
+
+add.ci <- function(object, fit.se, conf.level=0.95){
+  fit <- fit.se$fit
+  se.fit <- fit.se$se.fit
+  residual.scale <- fit.se$residual.scale
+  pi.se <- sqrt(residual.scale^2 + se.fit^2) 
+  tquantile <- qt(1 - (1 - conf.level)/2, object$df.residual)
+  ci.fit <- cbind(lower = fit - tquantile*se.fit, upper = fit + tquantile*se.fit)
+  pi.fit <- cbind(lower = fit - tquantile*pi.se, upper = fit + tquantile*pi.se)
+  list(fit = fit, se.fit = se.fit, residual.scale = residual.scale, ci.fit = ci.fit, pi.fit = pi.fit)
+}
+
+y0 <- add.ci(male.glm3, y0)
+invlogit(y0$ci.fit)
+
+lines(x = time, y = invlogit(y0$ci.fit[,'lower']), lty = 2)
+lines(x = time, y = invlogit(y0$ci.fit[,'upper']), lty = 2)
+```
+
+
+
+#Question 2
+
+>Page 161 of the Gelman & Hill text describes data from a study of the effect of integrated pest
+management on reducing cockroach levels in urban apartments.In this experiment, the treatment and control were applied to 160 and 104 apartments, respectively (though only 158 of the treatment observations appear to have been included in the dataset supplied with the Gelman & Hill text). The outcome measure is y.
+
+##(a)
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+roachdata <- read.csv("C:/Users/Joshua/Desktop/Australian National University/2nd year/Semester 2/STAT3015- Generalised Linear Modelling/Assignments/Assignment 2/roachdata.csv", row.names=1)
+attach(roachdata)
+```
+
+We would like to Model the relationship between the trap rates of roaches and the predictors; *treatment, senior* and *roach1*. We can achieve this by fitting the following log-linear regression model for Poisson rates using the Poisson glm with the corresponding canonical link function as follows:
+
+$$\mu_{i} \sim Pois(\lambda_{i}), \ \mu_{i}=\lambda_{i}$$
+
+$$\eta_{i}=log(\mu_{i})=\beta_{0}+\beta_{1}\times treatment_{i} \ + \ \beta_{2}\times senior_{i} \ + \ \beta_{3}\times roach1_{i}$$
+
+where, 
+
+$$treatment_{i}=\begin{cases}
+1 &if \ treatment \\ 0 &if \ control \end{cases} \\$$
+
+$$senior_{i}=\begin{cases}
+1 &if \ senior \\ 0 &if \ otherwise \end{cases} \\$$
+
+```{r, message=FALSE, warning=FALSE}
+trap.rate <- y/exposure2
+roach.glm1 <- glm(trap.rate ~ treatment + senior + roach1,
+                  family = poisson, weights = exposure2)
+```
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(2,2), mar = c(4,4.3,4,4.3))
+plot(residuals(roach.glm1, type =  'deviance') ~ roach.glm1$linear.predictors,
+     xlab = 'Linear Predictors', ylab = 'Deviance Residuals',
+     main = 'Deviance Residual Plot')
+abline(h=0, lty = 2)
+qqnorm(residuals(roach.glm1, type =  'pearson'),
+       ylab = 'Pearson Residual Quantiles', main = 'Normal Q-Q Plot')
+qqline(residuals(roach.glm1, type =  'pearson'), lty = 3)
+abline(0,1)
+plot(roach.glm1, which = c(4,5))
+```
+
+The Deviance Residuals vs Linear Predictors plot shows major over-dispersion of the deviance residuals as most points greatly exceed the $\pm2$ range. We also see a strong indication of issues with homoscedasticity, which violates our constant variance assumption. It is likely that we may need to remove certain observations from our data.
+
+Again from the Normal Quantile-Quantile plot, we can see major issues with normality. A major right-tail in the distribution of the Pearson residuals is also apparent, and thus a major issue for our normality assumption.
+
+The Cook's Distance and Residuals vs Leverage plots identify observations 93, 261 and especially observation 16 to be of extremely high influence. These observations have almost certainly heavily impacted the fit of our model, thereby resulting in the issues with normality and spread. There also appear to be some observations that possess significantly high leverage (exceeding the $\frac{2p}{n}=4/262$ cut off value), especially observation 16. 
+
+##(b)
+
+```{r, message=FALSE, warning=FALSE}
+round(summary(roach.glm1)$coefficients,4)
+```
+
+Despite the major issues with model diagnostics, we can see from the summary output that all the model covariates are statistically significant, so it appears like there is definitely some characteristic structure in the data we can model. We'll assess the overall fit of the model by conducting a 'Goodness-of-fit' Test as follows:
+
+$$H_{0}:\phi=1 \ \ \ H_{1}:\phi\neq 1$$
+Our observed test statistic $\hat{\phi}$ follows a Chi-Square distribution of n-p=258 degrees of freedom
+
+$$\hat{\phi}=\frac{\Sigma d^{2}_{i}}{n-p} \sim \chi^{2}_{n-p}$$
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm1$deviance/summary(roach.glm1)$dispersion
+qchisq(p = c(0.025,0.975), df = roach.glm1$df.residual)
+```
+As the residual deviance of $\hat{\phi}=11429.47$ lies outside our middle 95% interval of (215.4017,304.3848), we reject the null hypothesis in favour of the alternative hypothesis and conclude that there is statistically significant over-dispersion in our model. This supports our observations from the residuals plots in part (a), whereby we observed extremely high variability in the spread of the residuals (majority of which exceed the $\pm2$ range). This is due to there being a strong positive skew in the data and the presence of highly influential points, including both extreme outliers and highly-levered observations which have had a significant influence on the overall fit of the model. 
+
+##(c)
+
+We can remodel the Poisson glm to account for over-dispersion by assuming our response variables follow a quasipoisson distribution as follows:
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm2 <- glm(trap.rate ~ treatment + senior + roach1,
+                  family = quasipoisson, weights = exposure2)
+round(summary(roach.glm2)$coefficients,4)
+```
+
+There isn't any apparent change in the coefficients of the modified model, however the *treatment* factor drops in significance to just the $\alpha=0.05$ level and the *senior* factor drops in statistical significance all together. The quasipoisson glm model takes the dispersion parameter to be $\hat{\phi}=65.4403$ as opposed to the Poisson glm's estimated dispersion parameter of 1. 
+
+Again, we can conduct a 'Goodness-of-fit' Test to assess the fit of our modified model:
+
+$$H_{0}:\phi=1 \ \ \ H_{1}:\phi\neq 1$$
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm2$deviance/summary(roach.glm2)$dispersion
+qchisq(p = c(0.025,0.975), df = roach.glm2$df.residual)
+```
+
+As the residual deviance of $\hat{\phi}=174.6549$ lies within the middle 95% interval (215.4017,304.3848), we  do not reject the null hypothesis in our two-tailed goodness-of-fit test. This suggests that there is no significant over/under-dispersion of the residuals in our new model. We can also conduct a stronger, one-tailed test for over-dispersion: 
+
+$$H_{0}:\phi=1 \ \ \ H_{1}:\phi> 1$$
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm2$deviance/summary(roach.glm2)$dispersion
+qchisq(p = 0.95, df = roach.glm2$df.residual)
+```
+
+Again, our test-statistic does not exceed the 95% quantile, so we do not reject the null hypothesis and thus there isn't any issue with over-dispersion.
+
+##(d)
+
+We may experiment with our model fitted in part (c) to account for observation 16, which we've found to be highly influential in previously fitted regression models. We do so by fitting a factor variable for *obs16* into our log-linear model:
+
+$$\eta_{i}=log(\mu_{i})=\beta_{0}+\beta_{1}\times treatment_{i} \ + \ \beta_{2}\times senior_{i} \ + \ \beta_{3}\times roach1_{i} \ + \ \beta_{4} \times obs16_{i}$$
+
+where, 
+
+$$treatment_{i}=\begin{cases}
+1 &if \ treatment \\ 0 &if \ control \end{cases} \\$$
+
+$$senior_{i}=\begin{cases}
+1 &if \ senior \\ 0 &if \ otherwise \end{cases} \\$$
+
+$$obs16_{i}=\begin{cases}
+1 &if \ observation \ 16 \\ 0 &if \ otherwise \end{cases} \\$$
+
+```{r, message=FALSE, warning=FALSE}
+obs16 <- rep(0, length(y))
+obs16[16] <- 1
+roach.glm3 <- glm(trap.rate ~ treatment + senior + roach1 + obs16,
+                  family = quasipoisson, weights = exposure2)
+round(summary(roach.glm3)$coefficients,4)
+```
+
+From the summary output, there doesn't appear to be any drastic changes in the regression coefficients. The *senior* factor covariate remains insignificant in this model and our newly fitted *obs16* factor is statistically significant. Once again, we conduct a 'Goodness-of-fit' Test to assess the fit of our model:
+
+$$H_{0}:\phi=1 \ \ \ H_{1}:\phi\neq 1$$
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm3$deviance/summary(roach.glm3)$dispersion
+qchisq(p = c(0.025,0.975), df = roach.glm3$df.residual)
+```
+
+As the residual deviance of $\hat{\phi} = 169.3437$ lies within the middle 95% interval (214.4881,303.2984), we do not
+reject the null hypothesis in our two-tailed goodness-of-fit test. This suggests that there is no significant
+over/under-dispersion of the residuals in our model. We can also conduct a stronger, one-tailed test for
+over-dispersion:
+
+$$H_{0}:\phi=1 \ \ \ H_{1}:\phi> 1$$
+
+```{r, message=FALSE, warning=FALSE}
+roach.glm3$deviance/summary(roach.glm3)$dispersion
+qchisq(p = 0.95, df = roach.glm3$df.residual)
+```
+
+Again, our test-statistic does not exceed the 95% quantile, so we do not reject the null hypothesis and thus
+there isn't any issue with over-dispersion.
+
+```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow = c(2,2), mar = c(4,4.3,4,4.3))
+plot(residuals(roach.glm3, type =  'pearson') ~ roach.glm3$linear.predictors,
+     xlab = 'Linear Predictors', ylab = 'Pearson Residuals',
+     main = 'Pearson Residual Plot')
+abline(h=0, lty = 2)
+qqnorm(residuals(roach.glm3, type =  'pearson'),
+       ylab = 'Pearson Residual Quantiles', main = 'Normal Q-Q Plot')
+qqline(residuals(roach.glm3, type =  'pearson'), lty = 3)
+abline(0,1)
+plot(roach.glm3, which = c(4,5))
+```
+
+The Pearson Residuals vs Linear Predictors plot still highlights issues with vertical outliers of the Pearson residuals as a large number points greatly exceed the $\pm2$ range, however this is still an improvement over previous models. We also still see a strong indication of issues with homoscedasticity, although not as severe.
+
+From the Normal Quantile-Quantile plot a major right-tail in the distribution of the Pearson residuals is still apparent, and thus still poses as a major issue for our normality assumption.
+
+The Cook's Distance and Residuals vs Leverage plots are where most of the improvements from our new model are present. None of the observations exceed the 0.5 Cook's distance level, and so we no longer have an issue with highly influential points. There still are some observations that possess significantly high leverage (exceeding the $\frac{2p}{n}=5/262$ cut off value), however, as no observations are highly influential, it's reasonable to assume that these shouldn't be too much of a concern for our model fit.
+
+
+##(e)
+```{r, message=FALSE, warning=FALSE}
+anova(roach.glm3, test = 'Chi')
+roach.glm4 <- glm(trap.rate[-16] ~ treatment[-16] + senior[-16] + roach1[-16],
+                  family = quasipoisson, weights = exposure2[-16])
+par(mfrow = c(2,2), mar = c(4,4.3,4,4.3))
+plot(residuals(roach.glm4, type =  'pearson') ~ roach.glm4$linear.predictors,
+     xlab = 'Linear Predictors', ylab = 'Pearson Residuals',
+     main = 'Pearson Residual Plot')
+abline(h=0, lty = 2)
+qqnorm(residuals(roach.glm4, type =  'pearson'),
+       ylab = 'Pearson Residual Quantiles', main = 'Normal Q-Q Plot')
+qqline(residuals(roach.glm4, type =  'pearson'), lty = 3)
+abline(0,1)
+plot(roach.glm4, which = c(4,5))
+```
+
+Clearly observation 16 is an outlier, so lets fit the model excluding this observation.
+-------
+
